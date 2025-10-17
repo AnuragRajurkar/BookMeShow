@@ -3,6 +3,7 @@ import { dummyBookingData } from "../../assets/assets";
 import { Loading } from "../../components/Loading";
 import { Title } from "../../components/admin/Title";
 import { dateFormat } from "../../lib/dateFormat";
+import { useAppContext } from "../../context/appContext";
 
 
 export function ListBookings (){
@@ -12,14 +13,24 @@ export function ListBookings (){
     const [bookings, setBookings] = useState([]);
     const [isLoading, setIsLoading] = useState(true)
 
+    const {axios, getToken, user, image_base_url} = useAppContext();
+
     const getAllBookings = async () => {
-        setBookings(dummyBookingData)
+        try {
+            const { data } = await axios.get('/api/admin/all-bookings', {headers : {Authorization : `Bearer ${await getToken()}`}})
+            setBookings(data.bookings)
+        } catch (error) {
+            console.error(error)
+        }
         setIsLoading(false)
     }
 
     useEffect(() => {
-        getAllBookings();
-    }, [])
+        if(user)
+        {
+            getAllBookings();
+        }
+    }, [user])
 
 
   return !isLoading ? (

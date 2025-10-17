@@ -36,7 +36,7 @@ const syncUserDeletion = inngest.createFunction(
 )
 
 
-//inngest funvtion to update uder from database
+//inngest function to update user in database
 
 const syncUserUpdation = inngest.createFunction(
 
@@ -55,6 +55,8 @@ const syncUserUpdation = inngest.createFunction(
         await User.findByIdAndUpdate(id, userData)
     }
 )
+
+
 
 // Create an empty array where we'll export future Inngest functions
 export const functions = [syncUserCreation,syncUserDeletion, syncUserUpdation ];
