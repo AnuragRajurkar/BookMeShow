@@ -18,13 +18,15 @@ const port = 3000;
 
 await connectDb();
 
+//stripe webhooks route
+app.post('/api/webhook/stripe', express.raw({ type : 'application/json'}), stripeWebHooks)
+
 //Middleware
 app.use(cors());  
 app.use(express.json());
 app.use(clerkMiddleware())
 
-//stripe webhooks route
-app.post('/api/webhook/stripe', express.raw({ type : 'application/json'}), stripeWebHooks)
+
 
 //api routes
 app.get('/', (req,res) => res.send("Server is live"))
