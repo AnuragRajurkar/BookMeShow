@@ -11,6 +11,7 @@ import bookingRouter from './routes/bookingRoute.js';
 import adminRouter from './routes/adminRoute.js';
 import userRouter from './routes/userRoutes.js';
 import { stripeWebHooks } from './controllers/stripeWebhooks.js';
+import bodyParser from 'body-parser';
 
 const app = express();
 const port = 3000;
@@ -19,7 +20,7 @@ const port = 3000;
 await connectDb();
 
 //stripe webhooks route
-app.post('/api/webhook/stripe', express.raw({ type : 'application/json'}), stripeWebHooks)
+app.post('/api/webhook/stripe', bodyParser.raw({ type : 'application/json'}), stripeWebHooks)
 
 //Middleware
 app.use(cors());  
