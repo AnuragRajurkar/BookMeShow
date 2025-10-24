@@ -15,38 +15,23 @@ export const stripeWebHooks = async (req, res) => {
         return res.status(400).send(`Webhook Error : ${error.message}`)
     }
 
-     // ✅ Handle successful payment
-  if (event.type === "checkout.session.completed" || event.type === "payment_intent.succeeded") {
-    const session = event.data.object;
-    console.log("✅ Session object:", session);
+   
 
-    // Make sure you pass bookingId as metadata when creating the session
-    const bookingId = session.metadata?.bookingId;
-
-    if (!bookingId) {
-      console.error("❌ No bookingId found in metadata");
-      return res.status(200).json({ received: true });
-    }
-
-    // Update booking
-    try {
-      await Booking.findByIdAndUpdate(bookingId, { isPaid: true });
-      console.log(`✅ Booking ${bookingId} marked as paid`);
-    } catch (err) {
-      console.error("❌ Failed to update booking:", err);
-    }
-  }
-
-  res.status(200).json({ received: true });
-};
-
-/*
 
     try {
         switch(event.type)
         {
             case 'checkout.session.completed':
                 {
+
+                    const session = event.data.object;
+                    const bookingId = session.metadata.bookingId;
+
+                    await Booking.findByIdAndUpdate(bookingId, {
+                    isPaid: true,
+                   paymentLink: '',
+              });
+              /*
                     const paymentIntent = event.data.object;
                     const sessionList = await stripeInstance.checkout.sessions.list({
                         payment_intent : paymentIntent.id
@@ -61,7 +46,8 @@ export const stripeWebHooks = async (req, res) => {
                     await Booking.findByIdAndUpdate(bookingId, {
                         isPaid : true,
                         paymentLink : ''
-                    })
+                    })*/
+                    console.log(' Booking marked as paid:', bookingId);
                     break
                 }
 
@@ -72,4 +58,4 @@ export const stripeWebHooks = async (req, res) => {
         console.log("Webhook processing error : ", error)
         res.status(500).send("Internal Server Error")
     }
-}*/
+}
