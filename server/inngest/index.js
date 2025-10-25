@@ -127,7 +127,116 @@ const sendBookingConfirmationEmail = inngest.createFunction(
    
 )
 
+//inngest function to send reminder email to user before showtime
+
+const sendShowReminders = inngest.createFunction(
+    {id : 'send-show-reminders'},
+    {cron : '0 */8 * * *'}, //it will execute every 8 hours
+
+    async ({step})   => {
+        const now = new Date();
+        const in8Hours = new Date(now.getTime() + 8 * 60 * 60 * 1000)
+        const windowStart = new Date(in8Hours.getTime() - 10 * 30 * 1000)
+
+        //prepare reminder tasks
+        const reminderTasks = await step.run('prepare-reminder-tasks', async () => {
+            const shows = await Show.find({
+                showDateTime : {$gte : windowStart, $lte : in8Hours}
+            }).populate('movie')
+
+            const tasks = [];
+
+            for(const show of shows){
+                if(!show.movie || !show.occupiedSeats) continue;
+
+                const userIds = [...new set(Object.values(show.occupiedSeats))]
+
+                if(userIds.length === 0) continue;
+
+                const users = await User.find({_id : {$in : userIds}}).select("name email");
+
+                for(const user of users)
+                {
+                    tasks.push({
+                        userEmail : user.email,
+                        userName  :user.name,
+                        movieTitle : show.movie.title,
+                        showTime : show.showTime
+                    })
+                }
+
+            }
+            return tasks;
+        })
+
+        if(reminderTasks.length === 0 ) {
+            return {sent : 0, message : "No reminders to send"}
+        }
+        //send reminders emails
+
+        const results = await step.run('send-all-reminders', async () => {
+            return await Promise.allSettled(
+                reminderTasks.map(task => sendEmail({
+                    to : task.userEmail,
+                    subject : `Reminder : your movie ${task.movieTitle} starts soon`,
+                    body : `
+                    <h2>Hello ${task.userName}</h2>
+                    <p>This is a quick reminder that your movie : </p>
+                    <h3>${task.movieTitle}</h3>
+                    <p>
+                    is sheduled for <strong> ${new Date(task.showTime).toLocaleDateString('en-Us', {timeZone : 'Asia/Kolkata'})}</strong> at <strong> ${new Date(task.showTime).toLocaleTimeString('en-US', {timeZone : 'Asia/Kolkata'})} </strong>
+                    </p>
+                    <p>It starts in approximately 8 hours make you are ready</p> </br>
+                    <p>Enjoy the show! <br/> BookMeShow Team </p>
+                    `
+                }))
+            )
+        })
+
+        const sent = results.filter(r => r.status === 'fulfilled').length;
+        const failed = results.length - sent;
+
+        return {sent, failed, message : `Sent ${sent} reminders(s), ${failed} failed`}
+    }
+)
+
+//function that will send email to admin whenever he adds any show
+
+const sendNewShowNotifications = inngest.createFunction(
+    {id : 'send-new-show-notification'},
+    {event : 'app/show.added'},
+    async ({event}) => {
+        const {movieTitle} = event.data;
+
+        const users = await User.find({});
+
+        for(const user of users)
+        {
+            const userEmail = user.email;
+            const userName = user.name;
+
+            const subject = `New Show Added : ${movieTitle}`;
+            const body = `
+            <h1>Hi ${userName}</h1>
+            <p>We have added a new show to our library : </p>
+            <h3>${movieTitle}</h3>
+            <p>Visit our Websites</p>
+            <br />
+            <p>Thanks <br /> BookMeShow Team!</p>
+            `
+
+            await sendEmail({
+            to : userEmail,
+            subject,
+            body,
+        })
+        }
+
+        return {message : "Notification sent."}
+   
+    }
+)
 
 
 // Create an empty array where we'll export future Inngest functions
-export const functions = [syncUserCreation,syncUserDeletion, syncUserUpdation, releaseSeatsAndDeleteBookings,sendBookingConfirmationEmail ];
+export const functions = [sendNewShowNotifications,sendShowReminders,syncUserCreation,syncUserDeletion, syncUserUpdation, releaseSeatsAndDeleteBookings,sendBookingConfirmationEmail ];
