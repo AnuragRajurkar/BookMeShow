@@ -109,7 +109,7 @@ export const createBooking = async (req,res) => {
                 bookingId : booking._id.toString()
             }
         })
-
+ 
         res.json({success : true, url:session.url })
 
     } catch (error) {

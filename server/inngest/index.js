@@ -2,6 +2,7 @@ import { Inngest } from "inngest";
 import User from "../models/User.js";
 import Show from "../models/Show.js";
 import Booking from "../models/Booking.js";
+import sendEmail from "../configs/nodeMailer.js";
 
 // Create a client to send and receive events
 export const inngest = new Inngest({ id: "movie-ticket-booking" })
@@ -89,7 +90,44 @@ const releaseSeatsAndDeleteBookings = inngest.createFunction(
     }
 )
 
+//inngest function to send email when user books a show
+
+
+const sendBookingConfirmationEmail = inngest.createFunction(
+    {id : 'send-booking-confirmation-email'},
+    { event : 'app/show.booked'},
+    async ({event, step}) => {
+        const {bookingId} = event.data;
+
+        //to send confirmation email first we will create booking data
+         const booking = await Booking.findById(bookingId).populate({
+            path : 'show',
+            populate : {path : "movie", model : 'Movie'}
+         }).populate('user')
+
+         //we will send this data in email we need package called nodemailer
+
+         await sendEmail({
+            to : booking.user.email,
+            subject : `Payment Confirmation : ${booking.show.movie.title} booked!`,
+            body : `
+            <h1> Hi ${booking.user.name}</h1>
+            <p>Your booking for ${booking.show.movie.title} <strong> is confirmed </strong> </p>
+            <p>
+            <strong>Date :</strong> ${new Date(booking.show.showDateTime).toLocaleDateString(`en-US`, {timeZone : 'Asia/Kolkata'})} <br />
+            <strong>Time : </strong> ${new Date(booking.show.showDateTime).toLocaleTimeString(`en-US`, {timeZone : 'Asia/Kolkata'})}
+            </p>
+            <p>Enjoy the show</p>
+            <p>Thanks for booking with us! <br/> BookMeShow Team</p>
+            `
+         })
+    }
+
+    
+   
+)
+
 
 
 // Create an empty array where we'll export future Inngest functions
-export const functions = [syncUserCreation,syncUserDeletion, syncUserUpdation, releaseSeatsAndDeleteBookings ];
+export const functions = [syncUserCreation,syncUserDeletion, syncUserUpdation, releaseSeatsAndDeleteBookings,sendBookingConfirmationEmail ];
